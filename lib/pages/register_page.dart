@@ -1,5 +1,9 @@
+import 'package:chat_app/services/services.dart';
 import 'package:chat_app/widgets/widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../helpers/helpers.dart';
 
 class RegisterPage extends StatelessWidget {
   @override
@@ -54,6 +58,7 @@ class _FormState extends State<_Form> {
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
     return Container(
       margin: const EdgeInsets.only(top: 40),
       padding: const EdgeInsets.symmetric(horizontal: 50),
@@ -78,11 +83,33 @@ class _FormState extends State<_Form> {
           ),
           CustomBtn(
             text: "Registrar",
-            onPressed: () {
-              print(emailCtrl.text);
-              print(passCtrl.text);
-              print(nameCtrl.text);
-            },
+            onPressed: authService.autenticando
+                ? null
+                : () async {
+                    FocusScope.of(context).unfocus();
+                    final registroOk = await authService.register(
+                      emailCtrl.text.trim(),
+                      passCtrl.text.trim(),
+                      nameCtrl.text.trim(),
+                    );
+                    if (registroOk == true) {
+                      Navigator.pushReplacementNamed(context, 'users');
+                    } else {
+                      if (registroOk == null) {
+                        mostrarAlerta(
+                          context,
+                          "Registro Incorrecto",
+                          'Campos Vacios',
+                        );
+                      } else {
+                        mostrarAlerta(
+                          context,
+                          "Registro Incorrecto",
+                          '$registroOk',
+                        );
+                      }
+                    }
+                  },
           )
         ],
       ),

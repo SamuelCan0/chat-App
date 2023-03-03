@@ -1,5 +1,7 @@
 import 'package:chat_app/models/models.dart';
+import 'package:chat_app/services/services.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 class UsersPage extends StatefulWidget {
@@ -12,18 +14,21 @@ class _UsersPageState extends State<UsersPage> {
       RefreshController(initialRefresh: false);
 
   final usuarios = [
-    User(uid: '1', name: 'Samuel', email: 'test1@test.com', online: true),
-    User(uid: '2', name: 'Maria', email: 'test2@test.com', online: true),
-    User(uid: '3', name: 'Fernando', email: 'test3@test.com', online: false),
-    User(uid: '4', name: 'Ricardo', email: 'test4@test.com', online: true),
+    Usuario(uid: '1', nombre: 'Samuel', email: 'test1@test.com', online: true),
+    Usuario(uid: '2', nombre: 'Maria', email: 'test2@test.com', online: true),
+    Usuario(
+        uid: '3', nombre: 'Fernando', email: 'test3@test.com', online: false),
+    Usuario(uid: '4', nombre: 'Ricardo', email: 'test4@test.com', online: true),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final authServices = Provider.of<AuthService>(context);
+    final usuario = authServices.usuario;
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Mi Nombre',
+          usuario.nombre,
           style: TextStyle(
             color: Colors.black87,
           ),
@@ -31,7 +36,10 @@ class _UsersPageState extends State<UsersPage> {
         elevation: 1,
         backgroundColor: Colors.white,
         leading: IconButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.pushReplacementNamed(context, 'login');
+            AuthService.deleteToken();
+          },
           icon: Icon(
             Icons.exit_to_app,
             color: Colors.black87,
@@ -62,7 +70,7 @@ class _UsersPageState extends State<UsersPage> {
       physics: BouncingScrollPhysics(),
       itemCount: usuarios.length,
       separatorBuilder: (BuildContext context, int i) {
-        return Divider();
+        return const Divider();
       },
       itemBuilder: (BuildContext context, int i) {
         return _UserTile(usuario: usuarios[i]);
@@ -82,17 +90,17 @@ class _UserTile extends StatelessWidget {
     required this.usuario,
   }) : super(key: key);
 
-  final User usuario;
+  final Usuario usuario;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      title: Text(usuario.name),
+      title: Text(usuario.nombre),
       subtitle: Text(usuario.email),
       leading: CircleAvatar(
         backgroundColor: Colors.green[300],
         child: Text(
-          usuario.name.substring(0, 2),
+          usuario.nombre.substring(0, 2),
           style: TextStyle(color: Colors.white),
         ),
       ),

@@ -4,11 +4,11 @@ class CustomBtn extends StatelessWidget {
   const CustomBtn({
     Key? key,
     required this.text,
-    required this.onPressed,
+    this.onPressed,
   }) : super(key: key);
 
   final String text;
-  final void Function() onPressed;
+  final void Function()? onPressed;
 
   @override
   Widget build(BuildContext context) {
