@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:chat_app/models/models.dart';
+import 'package:chat_app/services/services.dart';
 import 'package:chat_app/widgets/widgets.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class ChatPage extends StatefulWidget {
   @override
@@ -13,24 +16,77 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
   bool _isTyping = false;
-  List<CustomChatMessage> _messages = [];
+  final List<CustomChatMessage> _messages = [];
+
+  late ChatService chatService;
+  late SocketService socketService;
+  late AuthService authService;
+
+  @override
+  void initState() {
+    chatService = Provider.of<ChatService>(context, listen: false);
+    socketService = Provider.of<SocketService>(context, listen: false);
+    authService = Provider.of<AuthService>(context, listen: false);
+    socketService.socket.on('mensaje-personal', _escucharMensaje);
+    _cargarHistorial(chatService.usuarioPara.uid);
+    super.initState();
+  }
+
+  void _cargarHistorial(String usuarioID) async {
+    List<Mensaje> chat = await chatService.getChat(usuarioID);
+
+    final history = chat.map(
+      (m) => CustomChatMessage(
+        message: m.mensaje,
+        uid: m.de,
+        animationController: AnimationController(
+          vsync: this,
+          duration: Duration(milliseconds: 0),
+        )..forward(),
+      ),
+    );
+
+    setState(() {
+      _messages.insertAll(0, history);
+    });
+  }
+
+  void _escucharMensaje(dynamic payload) {
+    CustomChatMessage message = CustomChatMessage(
+      message: payload['mensaje'],
+      uid: payload['de'],
+      animationController: AnimationController(
+          vsync: this, duration: Duration(milliseconds: 300)),
+    );
+
+    setState(() {
+      _messages.insert(0, message);
+    });
+
+    message.animationController.forward();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final chatServices = Provider.of<ChatService>(context);
+    final usuarioPara = chatServices.usuarioPara;
+
     return Scaffold(
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.black87),
         backgroundColor: Colors.white,
         title: Column(
           children: [
             CircleAvatar(
-              child: Text('TE', style: TextStyle(fontSize: 12)),
               backgroundColor: Colors.green[200],
               maxRadius: 15,
+              child: Text(usuarioPara.nombre.substring(0, 2),
+                  style: TextStyle(fontSize: 12)),
             ),
             const SizedBox(height: 3),
             Text(
-              'Teodoro',
-              style: TextStyle(color: Colors.black87, fontSize: 12),
+              usuarioPara.nombre,
+              style: const TextStyle(color: Colors.black87, fontSize: 12),
             ),
           ],
         ),
@@ -113,13 +169,12 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   }
 
   _handleSubmit(String mensaje) {
-    print(mensaje);
     _textController.clear();
     _focusNode.requestFocus();
 
     final newMessage = CustomChatMessage(
       message: mensaje,
-      uid: '123',
+      uid: authService.usuario.uid,
       animationController: AnimationController(
         vsync: this,
         duration: Duration(milliseconds: 300),
@@ -130,6 +185,12 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     newMessage.animationController.forward();
 
     setState(() => _isTyping = false);
+
+    socketService.emit('mensaje-personal', {
+      'de': authService.usuario.uid,
+      'para': chatService.usuarioPara.uid,
+      'mensaje': mensaje,
+    });
   }
 
   @override
@@ -139,6 +200,8 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     for (CustomChatMessage message in _messages) {
       message.animationController.dispose();
     }
+
+    socketService.socket.off('mensaje-personal');
 
     super.dispose();
   }
